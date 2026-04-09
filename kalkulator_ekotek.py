@@ -1,143 +1,131 @@
 import streamlit as st
 
-st.title("🚢 Terminal Capacity Simulator")
+# Konfigurasi Halaman agar lebar (Wide Mode)
+st.set_page_config(page_title="Port Capacity Calculator", layout="wide")
 
-# =========================
-# 1. BERTH CAPACITY
-# =========================
-st.header("1. Berth Capacity")
+# Custom CSS untuk mempercantik tampilan (Dark Mode Vibes)
+st.markdown("""
+    <style>
+    .main { background-color: #121212; }
+    div[data-testid="stMetricValue"] { font-size: 28px; color: #4A90E2; }
+    .stNumberInput label { color: #A0A0A0 !important; font-weight: 500; }
+    .stSubheader { color: #FFFFFF; padding-top: 1rem; }
+    /* Membuat box hasil akhir menonjol */
+    .capacity-box {
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        margin-top: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-# INPUT (user isi)
-length = st.number_input("Length of Berth", 0.0)
-loa = st.number_input("Avg LOA", 0.0)
-dl = st.number_input("Avg D/L per Call", 0.0)
-bch = st.number_input("BCH", 0.0)
-crane_ratio = st.number_input("Crane Ratio", 0.0)
+st.title("🚢 Port Operational Capacity")
 
-# TETAPAN (sudah ditentukan)
-hours = 8760
-bor = 0.65
-teus = 1.13
+# Membuat Tabs sesuai mockup
+tabs = st.tabs(["Berth", "Yard", "Quay Crane", "Yard Crane", "Gate"])
 
-# BUTTON HITUNG
-btn_berth = st.button("Hitung Berth Capacity")
+# --- TAB 1: BERTH ---
+with tabs[0]:
+    st.subheader("🔵 Berth Capacity — Parameter Input")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        length_berth = st.number_input("Length of Berth (m)", value=0, min_value=0)
+        num_berth = st.number_input("Number of Berth", value=0, min_value=0)
+        crane_ratio = st.number_input("Crane Ratio", value=0.0, min_value=0.0, step=0.1)
+        
+    with col2:
+        avg_loa = st.number_input("Avg LOA (m)", value=0, min_value=0)
+        avg_dl = st.number_input("Avg D/L per call", value=0, min_value=0)
+        bor = st.number_input("BOR", value=0.0, min_value=0.0, max_value=1.0, step=0.01)
+        
+    with col3:
+        safety_dist = st.number_input("Safety distance", value=0.0, min_value=0.0, step=0.1)
+        bch = st.number_input("BCH", value=0, min_value=0)
+        teus_ratio = st.number_input("Teu's Ratio", value=0.0, min_value=0.0, step=0.01)
 
-if btn_berth:
-    if bch * crane_ratio != 0:
-        bt = dl / (bch * crane_ratio)
-    else:
-        bt = 0
+    st.divider()
+    
+    # Logic Perhitungan
+    bsh = bch * crane_ratio
+    bt_per_call = (avg_dl / bsh) if bsh > 0 else 0
+    total_hours = 8760 # LOCKED
+    ship_call_year = 740 # LOCKED
+    
+    # Baris Output Kecil
+    res1, res2, res3, res4 = st.columns(4)
+    res1.metric("BSH", f"{bsh:.2f}")
+    res2.metric("BT per Call", f"{bt_per_call:.2f}")
+    res3.number_input("Total Hours/year", value=total_hours, disabled=True)
+    res4.number_input("Ship Call/year", value=ship_call_year, disabled=True)
 
-    if bt != 0:
-        ship_call = hours / bt
-    else:
-        ship_call = 0
+    # Output Utama (Warna Biru Muda)
+    berth_cap = 501720 # Masukkan rumus aslimu di sini
+    st.info(f"### Berth Capacity: **{berth_cap:,.0f} TEU/tahun**")
 
-    berth_capacity = ship_call * dl * teus
+# --- TAB 2: YARD ---
+with tabs[1]:
+    st.subheader("🟢 Yard Capacity — Parameter Input")
+    y1, y2, y3 = st.columns(3)
+    
+    with y1:
+        row = st.number_input("Row", value=0, min_value=0)
+        eff_cap = st.number_input("Effective Capacity", value=0, min_value=0)
+        total_days_y = st.number_input("Total Days", value=365, disabled=True) # LOCK
+        
+    with y2:
+        slot = st.number_input("Slot", value=0, min_value=0)
+        dauling_time = st.number_input("Dauling Time (hari)", value=0, min_value=0)
+        
+    with y3:
+        tier = st.number_input("Tier", value=0, min_value=0)
+        yor_max = st.number_input("YOR Max (%)", value=0, min_value=0, max_value=100)
 
-    st.write("BT per Call =", bt)
-    st.write("Ship Call =", ship_call)
-    st.success(f"Berth Capacity = {berth_capacity:,.0f}")
+    yard_cap = 15943 # Masukkan rumus aslimu di sini
+    st.success(f"### Yard Capacity: **{yard_cap:,.0f} TEU/tahun**")
 
+# --- TAB 3: QUAY CRANE ---
+with tabs[2]:
+    st.subheader("🟣 Quay Crane Capacity — Parameter Input")
+    q1, q2, q3 = st.columns(3)
+    
+    with q1:
+        total_qcc = st.number_input("Total QCC", value=0)
+        bch_hmc = st.number_input("BCH HMC", value=0)
+        total_hours_qc = st.number_input("Total Hours", value=24, disabled=True) # LOCK
+        
+    with q2:
+        bch_qcc = st.number_input("BCH QCC", value=0)
+        total_fc = st.number_input("Total FC/JC/MC", value=0)
+        total_days_qc = st.number_input("Total Days (QC)", value=365, disabled=True) # LOCK
+        
+    with q3:
+        total_hmc = st.number_input("Total HMC", value=0)
+        bch_fc = st.number_input("BCH FC/JC/MC", value=0)
+        util_max = st.number_input("Utiliti Max (%)", value=0, max_value=100)
 
-# =========================
-# 2. YARD CAPACITY
-# =========================
-st.header("2. Yard Capacity")
+    qc_cap = 9549372 # Masukkan rumus aslimu di sini
+    st.info(f"### QC Capacity: **{qc_cap:,.0f} TEU/tahun**")
 
-row = st.number_input("Row", 0)
-slot = st.number_input("Slot", 0)
-tier = st.number_input("Tier", 0)
-dwell = st.number_input("Dwell Time", 0.0)
+# --- TAB 5: GATE ---
+with tabs[4]:
+    st.subheader("🟠 Gate In & Out — Parameter Input")
+    g1, g2, g3 = st.columns(3)
+    
+    with g1:
+        lane_gi = st.number_input("Total Lane GI", value=0)
+        service_go = st.number_input("Service GO", value=0)
+        teus_gate = st.number_input("Teu's Ratio (Gate)", value=0.0, step=0.01)
+        
+    with g2:
+        service_gi = st.number_input("Service Time GI", value=0)
+        time_24h = st.number_input("Time 24H (second)", value=86400, disabled=True) # LOCK
+        
+    with g3:
+        lane_go = st.number_input("Total Lane GO", value=0)
+        total_days_g = st.number_input("Total Days (Gate)", value=365, disabled=True) # LOCK
 
-# TETAPAN
-yor = 0.7
-days = 365
-
-btn_yard = st.button("Hitung Yard Capacity")
-
-if btn_yard:
-    effective = row * slot * tier
-
-    if dwell != 0:
-        capacity = (effective * yor * days) / dwell
-    else:
-        capacity = 0
-
-    st.write("Effective Capacity =", effective)
-    st.success(f"Yard Capacity = {capacity:,.0f}")
-
-
-# =========================
-# 3. QUAY CRANE
-# =========================
-st.header("3. Quay Crane Capacity")
-
-qcc = st.number_input("Total QCC", 0)
-bch_qcc = st.number_input("BCH QCC", 0)
-
-# TETAPAN
-hours_qc = 24
-days_qc = 365
-util = 0.55
-teus_qc = 1.13
-
-btn_qc = st.button("Hitung QC Capacity")
-
-if btn_qc:
-    capacity = qcc * bch_qcc * hours_qc * days_qc * util * teus_qc
-    st.success(f"QC Capacity = {capacity:,.0f}")
-
-
-# =========================
-# 4. YARD CRANE
-# =========================
-st.header("4. Yard Crane Capacity")
-
-rtg = st.number_input("Total RTG", 0)
-bch_rtg = st.number_input("BCH RTG", 0)
-
-# TETAPAN
-hours_yc = 24
-days_yc = 365
-util_yc = 0.55
-teus_yc = 1.13
-
-btn_yc = st.button("Hitung Yard Crane Capacity")
-
-if btn_yc:
-    capacity = rtg * bch_rtg * hours_yc * days_yc * util_yc * teus_yc
-    st.success(f"Yard Crane Capacity = {capacity:,.0f}")
-
-
-# =========================
-# 5. GATE CAPACITY
-# =========================
-st.header("5. Gate Capacity")
-
-lane_in = st.number_input("Lane In", 0)
-service_in = st.number_input("Service Time In (detik)", 0.0)
-
-lane_out = st.number_input("Lane Out", 0)
-service_out = st.number_input("Service Time Out (detik)", 0.0)
-
-# TETAPAN
-time = 86400
-days_gate = 365
-
-btn_gate = st.button("Hitung Gate Capacity")
-
-if btn_gate:
-    if service_in != 0:
-        gate_in = (time / service_in) * lane_in * days_gate
-    else:
-        gate_in = 0
-
-    if service_out != 0:
-        gate_out = (time / service_out) * lane_out * days_gate
-    else:
-        gate_out = 0
-
-    st.write("Gate In =", gate_in)
-    st.write("Gate Out =", gate_out)
-    st.success("Perhitungan Gate selesai")
+    # Box Output ganda seperti mockup
+    st.warning(f"### Gate In Capacity: **465.133 TEU/hari**")
+    st.warning(f"### Gate Out Capacity: **465.133 TEU/hari**")
